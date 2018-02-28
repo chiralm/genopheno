@@ -1,5 +1,49 @@
 import time
 import os
+import logging
+logger = logging.getLogger('root')
+
+
+def setup_logger(output_dir, name):
+    output_dir = expand_path(output_dir)
+    log_filename = "{}.log".format(name)
+    filepath = os.path.join(output_dir, log_filename)
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '[%(levelname)s] %(asctime)s:  %(message)s'
+            },
+            'simple': {
+                'format': '[%(levelname)s]: %(message)s'
+            }
+        },
+        'handlers': {
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple',
+                'stream': 'ext://sys.stdout'
+            },
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.FileHandler',
+                'formatter': 'standard',
+                'filename': filepath,
+                'mode': 'a',
+            }
+        },
+        'loggers': {
+            '': {
+                'handlers': ['console', 'file'],
+                'level': 'INFO',
+                'propagate': True
+            }
+        }
+    })
+
+    logger.setLevel(logging.INFO)
 
 
 def expand_path(path):
@@ -31,12 +75,12 @@ def timed_invoke(action, method):
     :param method: The method to invoke
     :return: The return of the method
     """
-    print 'Started {}...'.format(action)
+    logger.info('Started {}...'.format(action))
     start = time.time()
     try:
         output = method()
-        print 'Finished {} in {} seconds'.format(action, int(time.time() - start))
+        logger.info('Finished {} in {} seconds'.format(action, int(time.time() - start)))
         return output
     except Exception:
-        print 'Exception while {} after {} seconds'.format(action, int(time.time() - start))
+        logger.info('Exception while {} after {} seconds'.format(action, int(time.time() - start)))
         raise

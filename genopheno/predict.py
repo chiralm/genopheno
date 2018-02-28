@@ -3,6 +3,7 @@ import os
 import pickle
 import pandas as pd
 from preprocessing.users import UserPhenotypes, User
+from preprocessing.snp import extract_rsid, format_snps
 from models.common import build_model_desc
 from patsy import dmatrix
 from util import timed_invoke, expand_path, clean_output
@@ -33,7 +34,9 @@ def run(users_dir, init_dir, model_dir, output_dir):
 
     # Filter snps to only include selected snps
     snp_columns = model_config['snps']
-    snp_details = snp_details[snp_details['Rsid'].isin(snp_columns)]
+    selected_rsids = map(extract_rsid, snp_columns)
+    snp_details = snp_details[snp_details['Rsid'].isin(selected_rsids)]
+
 
     # Predict for each user
     imputer = model_config['imputer']
@@ -45,6 +48,7 @@ def run(users_dir, init_dir, model_dir, output_dir):
 
     def calc_mutations(user):
         mutations = user.allele_transformation(snp_details, how='right')
+        mutations['Rsid'] = mutations['Rsid'].apply(format_snps, args=(snp_details,))
         mutations.set_index('Rsid', inplace=True)
         mutations = mutations.transpose()
 
@@ -90,7 +94,7 @@ if __name__ == '__main__':
         "--users-dir",
         "-u",
         metavar="<directory path>",
-        default="resources/data/users",
+        default="resources" + os.sep + "data" + os.sep + "users",
         help="The directory that contains the users genomic data to predict the phenotypes for."
              "\n\nDefault: resources/data/users"
     )
@@ -99,16 +103,16 @@ if __name__ == '__main__':
         "--init-dir",
         "-i",
         metavar="<directory path>",
-        default="resources/data/preprocessed",
+        default="resources" + os.sep + "full_data" + os.sep + "preprocessed",
         help="The directory that the preprocessed files are in."
-             "\n\nDefault: resources/data/preprocessed"
+             "\n\nDefault: resources/full_data/preprocessed"
     )
 
     parser.add_argument(
         "--model-dir",
         "-m",
         metavar="<directory path>",
-        default="resources/data/model",
+        default="resources" + os.sep + "data" + os.sep + "model",
         help="The directory that the model files are in."
              "\n\nDefault: resources/data/model"
     )
@@ -117,7 +121,7 @@ if __name__ == '__main__':
         "--output",
         "-o",
         metavar="<directory path>",
-        default="resources/data/prediction",
+        default="resources" + os.sep + "data" + os.sep + "prediction",
         help="The directory that the output files should be written to."
              "\n\nDefault: resources/data/prediction"
     )

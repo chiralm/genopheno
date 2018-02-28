@@ -1,6 +1,7 @@
 import sklearn.metrics as skm
 import matplotlib as mp
 mp.use('Agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -11,8 +12,11 @@ from sklearn.preprocessing import Imputer
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import roc_curve, auc
 
+import logging
+logger = logging.getLogger("root")
 
-def build_model(data_set, data_split, no_interactions, negative, model, max_snps, output_dir,
+
+def build_model(data_set, data_split, no_interactions, negative, model, cross_validation, max_snps, output_dir,
                 param_grid={}, model_eval={}):
     """
     Builds a model for the data set
@@ -21,6 +25,7 @@ def build_model(data_set, data_split, no_interactions, negative, model, max_snps
     :param no_interactions: If false interactions aren't included in the model
     :param negative: The negative phenotype label
     :param model: The model to use for training and testing the data
+    :param cross_validation: The number of folds for k-fold cross validation
     :param max_snps: The maximum number of SNPs for the model to include
     :param output_dir: The directory to write the model artifacts in
     :param param_grid: The parameter matrix for the model
@@ -31,9 +36,9 @@ def build_model(data_set, data_split, no_interactions, negative, model, max_snps
     # Split the data into testing and training data
     x = data_set.drop(labels=['phenotype'], axis=1)
     snp_columns = x.columns.values
-    if len(snp_columns) > max_snps:
-        print '[WARNING] Too many model SNPs ({}, configured max: {}). Dropping extra SNPs.'.format(len(snp_columns),
-                                                                                                    max_snps)
+    if (max_snps is not None) and (len(snp_columns) > max_snps):
+        logger.info('[WARNING] Too many model SNPs ({}, configured max: {}). Dropping extra SNPs.'
+                    .format(len(snp_columns), max_snps))
         snp_columns = snp_columns[:max_snps]
         x = x[snp_columns]
     model_config['snps'] = snp_columns
@@ -41,7 +46,6 @@ def build_model(data_set, data_split, no_interactions, negative, model, max_snps
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=data_split/float(100), random_state=1, stratify=y
     )
-    print 'Model training with {} users and testing with {} users'.format(len(y_train), len(y_test))
 
     # Convert classifications to 0 and 1
     #
@@ -55,6 +59,9 @@ def build_model(data_set, data_split, no_interactions, negative, model, max_snps
     imputer, x_train, x_test = __impute_data(x_train, x_test)
     model_config['imputer'] = imputer
 
+    # print data counts
+    __save_data_summary(pheno_map, y_train, y_test, len(snp_columns), output_dir)
+
     # Define model
     model_config['no_interactions'] = no_interactions
     model_desc = build_model_desc(snp_columns, no_interactions)
@@ -62,12 +69,12 @@ def build_model(data_set, data_split, no_interactions, negative, model, max_snps
     x_test = dmatrix(model_desc, pd.DataFrame(x_test, columns=snp_columns))
 
     # Fit training data to model
-    grid = GridSearchCV(model, param_grid=param_grid)
+    grid = GridSearchCV(model, param_grid=param_grid, cv=cross_validation, verbose=5)
     grid.fit(x_train, y_train)
     best_model = grid.best_estimator_
     model_config['model'] = best_model
     __save_model(model_config, output_dir)
-    print 'Best estimator params found during grid search: {}'.format(grid.best_params_)
+    logger.info('Best estimator params found during grid search: {}'.format(grid.best_params_))
 
     # Test model
     y_pred = best_model.predict(x_test)
@@ -104,7 +111,7 @@ def __save_confusion_matrix(y_true, y_pred, output_dir, file_suffix):
     specificity = float(true_neg)/float(true_neg + false_pos)
 
     metrics = 'Confusion Matrix Metrics: {}    Accuracy:    {}{}    Sensitivity: {}{}    Specificity: {}{}    ' \
-              'TPR: {}{}    TNR: {}{}    FPR: {}{}    FNR: {}{}'\
+              'TP: {}{}    TN: {}{}    FP: {}{}    FN: {}{}'\
         .format(linesep, np.round(accuracy, 3),
                 linesep, np.round(sensitivity, 3),
                 linesep, np.round(specificity, 3),
@@ -114,7 +121,7 @@ def __save_confusion_matrix(y_true, y_pred, output_dir, file_suffix):
                 linesep, np.round(false_neg, 3),
                 linesep)
 
-    print metrics
+    logger.info(metrics)
     with open(path.join(output_dir, 'confusion_matrix_{}.txt'.format(file_suffix)), 'w') as metrics_file:
         metrics_file.write(metrics)
 
@@ -236,7 +243,7 @@ def __save_model(model_config, output_dir):
         with open(path.join(output_dir, 'model_config.pkl'), 'w') as f:
             f.write(pickle.dumps(model_config))
     except Exception as e:
-        print 'Cannot save model: {}'.format(e)
+        logger.info('Cannot save model: {}'.format(e))
 
 
 def __save_roc(y_true, y_pred, output_dir):
@@ -263,3 +270,41 @@ def __save_roc(y_true, y_pred, output_dir):
     plt.legend(loc="lower right")
     plt.savefig(path.join(output_dir, 'roc.png'))
     plt.close()
+
+
+def __save_data_summary(pheno_map, y_train, y_test, n_snps, output_dir):
+    # counts for phenotypes
+    n_neg = len(y_train[y_train == 0]) + len(y_test[y_test == 0])
+    n_pos = len(y_train[y_train == 1]) + len(y_test[y_test == 1])
+    total = n_neg + n_pos
+
+    # percent of phenotypes in data
+    p_neg = np.round(float(n_neg) / float(total) * 100, 1)
+    p_pos = np.round(float(n_pos) / float(total) * 100, 1)
+
+    # negative and positive labels
+    neg = pheno_map[0]
+    pos = pheno_map[1]
+
+    # model data counts
+    n_train = len(y_train)
+    n_test = len(y_test)
+
+    # format summary
+    pheno_summary = "-- Data Summary --{}\tNegative ({}):\t{} ({}%){}\tPositive ({}):\t{} ({}%){}\tTOTAL:\t{}{}"\
+        .format(linesep, neg, n_neg, p_neg,
+                linesep, pos, n_pos, p_pos,
+                linesep, total, linesep)
+    count_summary = "Training Count:\t{}{}Test Count:\t{}{}Number of SNP Features:\t{}{}"\
+        .format(n_train, linesep,
+                n_test, linesep,
+                n_snps, linesep)
+
+    logger.info(pheno_summary)
+    logger.info(count_summary)
+
+    # write to file
+    with open(path.join(output_dir, 'data_summary.txt'), 'w') as summary_file:
+        summary_file.write(pheno_summary)
+        summary_file.write(count_summary)
+    summary_file.close()

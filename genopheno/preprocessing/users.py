@@ -1,7 +1,11 @@
-import pandas as pd
-import numpy as np
-import re
 import os
+import re
+
+import numpy as np
+import pandas as pd
+
+
+MUTATION_LEVELS = ['nm', 'pm', 'fm']
 
 
 class UserPhenotypes:
@@ -30,6 +34,7 @@ class UserPhenotypes:
         phenotypes_map = {}
         no_pheno = []
         users = []
+        duplicates = []
 
         for user_file_name in self.get_user_geno_files(user_data_dir):
             # OpenSNP sometimes contains two genomic files for the same user Id. This is used to avoid duplicate
@@ -38,6 +43,7 @@ class UserPhenotypes:
             if user.id in users:
                 print '[WARNING] User {} already is associated with a genomic file. Ignoring file "{}"'\
                     .format(user.id, user.file_path)
+                duplicates.append(user.id)
                 continue
 
             # Get the phenotype classification for the user
@@ -67,17 +73,10 @@ class UserPhenotypes:
 
         if len(no_pheno) > 0:
             print '[WARNING]: No phenotype classification for users {}.'.format(no_pheno)
+        if len(duplicates) > 0:
+            print '[WARNING]: Multiple genomic files found for {} users: {}.'.format(len(duplicates), duplicates)
 
         return phenotypes_map
-
-    def reduce_phenotypes(self, reducer):
-        """
-        Invokes a method for each known user phenotype
-        :param reducer: The phenotype function. This should accept a phenotype key and a list of users
-        :return:
-        """
-        for phenotype, users in self.__phenotypes.items():
-            reducer(phenotype, users)
 
     @staticmethod
     def get_user_geno_files(user_data_dir):
@@ -95,6 +94,15 @@ class UserPhenotypes:
         file_name_regex = re.compile("^user[0-9]+_.*(23andme|ancestry).txt$")
         files = os.listdir(user_data_dir)
         return filter(file_name_regex.match, files)
+
+    def reduce_phenotypes(self, reducer):
+        """
+        Invokes a method for each known user phenotype
+        :param reducer: The phenotype function. This should accept a phenotype key and a list of users
+        :return:
+        """
+        for phenotype, users in self.__phenotypes.items():
+            self.__phenotypes[phenotype] = reducer(phenotype, users)
 
 
 class User:

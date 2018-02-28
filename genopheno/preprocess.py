@@ -1,5 +1,6 @@
 import argparse
 import pandas as pd
+import numpy as np
 from preprocessing import snp
 from util import *
 from preprocessing.users import UserPhenotypes
@@ -129,10 +130,12 @@ def run(user_data_dir, snp_data_dir, known_pheno_file, output_dir):
             all_user_data = timed_invoke('calculating mutation percentages', lambda: __calc_snp_percents(all_user_data))
             timed_invoke("saving preprocessed file for phenotype '{}'".format(phenotype),
                          lambda: __write_final(phenotype, all_user_data, output_dir))
+            return all_user_data
 
         timed_invoke('building final data structure', lambda: users_phenotypes.reduce_phenotypes(reducer))
 
     timed_invoke('preprocessing data', lambda: timed_run())
+
     print 'Output written to "{}"'.format(output_dir)
 
 

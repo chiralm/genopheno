@@ -1,15 +1,21 @@
 import argparse
-import re
 import os
-import pandas as pd
-from models.snp_selectors import mutation_difference
-from util import timed_invoke, expand_path, clean_output
-from models import elastic_net, decision_tree
+import re
 
+import pandas as pd
+import logging
+import logging.config
+
+from models.snp_selectors import mutation_difference
+from models import elastic_net, decision_tree, random_forest
+from util import timed_invoke, expand_path, clean_output, setup_logger
+
+logger = logging.getLogger('root')
 
 MODELS = {
     'en': elastic_net.build_model,
-    'dt': decision_tree.build_model
+    'dt': decision_tree.build_model,
+    'rf': random_forest.build_model,
 }
 
 
@@ -33,6 +39,7 @@ def __read_phenotype_input(input_dir):
         # add the data frame to the collection of preprocessed phenotypes
         phenotype = f[len(file_prefix):len(f) - len('.csv.gz')]
         phenotypes[phenotype] = df
+        logger.info("{} users and {} SNPs for phenotype '{}'".format(len(df.columns)-4, df.shape[0], phenotype))
 
     if len(phenotypes) == 0:
         raise ValueError('No preprocessed files in directory "{}". '
@@ -41,28 +48,29 @@ def __read_phenotype_input(input_dir):
     return phenotypes
 
 
-def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, diff_thresh, magnitude_thresh, data_split,
-        no_interactions, negative, max_snps, model_id, output_dir):
+def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thresh, data_split,
+        no_interactions, negative, max_snps, model_id, cross_validation, output_dir):
     """
     Builds a model to predict phenotype
     :param preprocessed_dir: The directory containing the preprocessed data
     :param invalid_thresh: The acceptable percentage of missing data before a SNP is discarded
     :param invalid_user_thresh: The acceptable percentage of missing data before a user is discarded
-    :param diff_thresh: The mutation percent difference between phenotypes to be selected as a model feature
-    :param magnitude_thresh: The mutation percentage difference magnitude between phenotypes to be selected as a model
-    feature.
+    :param relative_diff_thresh: The relative difference in mutation percent, calculated as a percent of the
+                                larger mutation percent value.
     :param data_split: The percent data used for testing.
     :param no_interactions: If True the model will not contain interactions
     :param negative: The negative phenotype label
     :param model_id: The id for the model to use
+    :param cross_validation: number of folds for cross validation
     :param output_dir: The directory to write the model in
     """
     # Expand file paths
     preprocessed_dir = expand_path(preprocessed_dir)
-    output_dir = expand_path(output_dir)
 
     # Make sure output directory exists before doing work
     clean_output(output_dir)
+
+    setup_logger(output_dir, model_id + "_model")
 
     # Get model
     build_model = MODELS.get(model_id)
@@ -70,15 +78,17 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, diff_thresh, magn
         raise ValueError('Model Id "{}" is not valid'.format(model_id))
 
     phenotypes = timed_invoke('reading the preprocessed files', lambda: __read_phenotype_input(preprocessed_dir))
+
     data_set = timed_invoke('creating model data set', lambda: mutation_difference.create_dataset(
-                               phenotypes, invalid_thresh, invalid_user_thresh, diff_thresh, magnitude_thresh)
+                               phenotypes, invalid_thresh, invalid_user_thresh, relative_diff_thresh)
                             )
     timed_invoke('building model', lambda: build_model(data_set, data_split, no_interactions, negative, max_snps,
-                                                       output_dir))
-    print 'Output written to "{}"'.format(output_dir)
+                                                       cross_validation, output_dir))
+    logger.info('Output written to "{}"'.format(output_dir))
 
 
 if __name__ == '__main__':
+
     # Parse input
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
@@ -86,9 +96,9 @@ if __name__ == '__main__':
         "--preprocessed",
         "-p",
         metavar="<directory path>",
-        default="resources/data/preprocessed",
+        default="resources" + os.sep + "full_data" + os.sep + "preprocessed",
         help="The directory containing the output data from the initialization phase."
-             "\n\nDefault: resources/data/preprocessed"
+             "\n\nDefault: resources/full_data/preprocessed"
     )
 
     parser.add_argument(
@@ -96,10 +106,10 @@ if __name__ == '__main__':
         "-it",
         metavar="percent",
         type=float,
-        default=40,
+        default=60,
         help="The maximum percentage of missing or invalid user observations a SNP can have before it is not "
              "considered as a feature in the model."
-             "\n\nDefault: 40"
+             "\n\nDefault: 60"
     )
 
     parser.add_argument(
@@ -114,31 +124,13 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        "--diff-thresh",
-        "-dt",
+        "--relative-diff-thresh",
+        "-rdt",
         metavar="percent",
         type=float,
-        default=20,
-        help="The difference threshold required for the SNP to be selected, in percentage points."
-             "\n\nDefault: 20"
-    )
-
-    parser.add_argument(
-        "--magnitude-thresh",
-        "-mt",
-        metavar="percent",
-        type=float,
-        default=5,
-        help="The magnitude of the difference threshold, in percentage points. This is the "
-             "minimum value for the difference in mutation percentage divided by the minimum "
-             "mutation value out of the two phenotypes. The purpose of this is to filter out "
-             "SNPs where the change meets the difference threshold, but is still a small "
-             "magnitude. For example, if the mutation difference is 5%%, but the SNP mutation "
-             "levels for each phenotype are 100%% and 95%% then this is less meaningful than if "
-             "the mutation levels were 6%% and 1%%. The magnitude threshold is meant to filter "
-             "out the SNP where the mutations are 100%% and 95%% and keep the SNP where the "
-             "mutations are 6%% and 1%%."
-             "\n\nDefault: 5"
+        help="The relative difference in percent of users with a particular genotype, used for SNP selection."
+             "\n SNPs will be selected such that the lower percent value between the two phenotype groups is "
+             "less than or equal to (1 - (relative_diff_thresh/100)) * higher. "
     )
 
     parser.add_argument(
@@ -171,10 +163,10 @@ if __name__ == '__main__':
     parser.add_argument(
         "--max-snps",
         "-ms",
-        default=200,
+        default=None,
         type=int,
         help="The maximum number of SNPs to include in the model"
-             "\n\nDefault: 200"
+             "\n\nDefault: None"
     )
 
     parser.add_argument(
@@ -183,21 +175,32 @@ if __name__ == '__main__':
         default="en",
         type=str,
         help="The type of model to use."
-             "\nen = Elastic tet"
+             "\nen = Elastic net"
              "\ndt = Decision tree"
              "\n\n Default: en"
+    )
+
+    parser.add_argument(
+        "--cross-validation",
+        "-cv",
+        type=int,
+        default=3,
+        help="Number of folds for k-fold cross validation."
+             "\n\nDefault: 3"
     )
 
     parser.add_argument(
         "--output",
         "-o",
         metavar="<directory path>",
-        default="resources/data/model",
+        default="resources" + os.sep + "data" + os.sep + "model",
         help="The directory that the output files should be written to. This will include all files required for the "
              "machine learning input."
              "\n\nDefault: resources/data/model"
     )
 
     args = parser.parse_args()
-    run(args.preprocessed, args.invalid_snp_thresh, args.invalid_user_thresh, args.diff_thresh, args.magnitude_thresh,
-        args.split, args.no_interactions, args.negative, args.max_snps, args.model, args.output)
+
+    run(args.preprocessed, args.invalid_snp_thresh, args.invalid_user_thresh, args.relative_diff_thresh,
+        args.split, args.no_interactions, args.negative, args.max_snps, args.model, args.cross_validation,
+        args.output)

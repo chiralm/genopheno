@@ -4,7 +4,7 @@ from os import path, linesep
 from sklearn.linear_model import SGDClassifier
 
 
-def build_model(data_set, data_split, no_interactions, negative, max_snps, output_dir):
+def build_model(data_set, data_split, no_interactions, negative, max_snps, cross_validation, output_dir):
     """
     Builds a model using logistic regression and an elastic net penalty
     :param data_set: The feature data set
@@ -35,6 +35,7 @@ def build_model(data_set, data_split, no_interactions, negative, max_snps, outpu
         negative,
         SGDClassifier(
             loss="log", penalty="elasticnet", random_state=1, n_jobs=-1, max_iter=1000, tol=1e-3),
+        cross_validation,
         max_snps,
         output_dir,
         param_grid,

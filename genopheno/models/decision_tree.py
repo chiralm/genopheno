@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 pydotplus.find_graphviz()
 
 
-def build_model(data_set, data_split, no_interactions, negative, max_snps, output_dir):
+def build_model(data_set, data_split, no_interactions, negative, max_snps, cross_validation, output_dir):
     param_grid = {
         "criterion": ["gini", "entropy"],
           #If float then min_samples_split is a percentage and ceil(min_samples_split * n_samples)
@@ -40,6 +40,7 @@ def build_model(data_set, data_split, no_interactions, negative, max_snps, outpu
         True,
         negative,
         tree.DecisionTreeClassifier(random_state=1),
+        cross_validation,
         max_snps,
         output_dir,
         param_grid,

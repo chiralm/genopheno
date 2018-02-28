@@ -101,3 +101,28 @@ def __extract_gene_info(gene_info):
         return match.group(1)
     else:
         return np.nan
+
+
+def extract_rsid(gene_rsid):
+    """
+    Extracts rsid from formatted gene name
+    :param gene_rsid:
+    :return:
+    """
+    match = re.match('[\w_]*_([\w]*)', gene_rsid)
+    if match:
+        return match.group(1)
+    else:
+        return np.nan
+
+
+def format_snps(rsid, snp_details):
+    """
+    Formats rsid into gene_<gene info>_<rsid>
+    :param rsid:
+    :param snp_details:
+    :return:
+    """
+    gene_info = snp_details[snp_details["Rsid"] == rsid]["Gene_info"]
+    formatted = 'gene_' + gene_info.str.replace(r'\W', '_').item() + '_' + rsid
+    return formatted
