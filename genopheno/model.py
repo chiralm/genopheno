@@ -7,7 +7,7 @@ import logging
 import logging.config
 
 from models.snp_selectors import mutation_difference
-from models import elastic_net, decision_tree, random_forest, xg_boost
+from models import elastic_net, decision_tree, random_forest
 from util import timed_invoke, expand_path, clean_output, setup_logger
 
 logger = logging.getLogger('root')
