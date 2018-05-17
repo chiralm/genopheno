@@ -172,12 +172,13 @@ if __name__ == '__main__':
     parser.add_argument(
         "--model",
         "-m",
-        default="en",
+        default="rf",
         type=str,
         help="The type of model to use."
              "\nen = Elastic net"
              "\ndt = Decision tree"
-             "\n\n Default: en"
+             "\nrf = Random Forest"
+             "\n\n Default: rf"
     )
 
     parser.add_argument(
