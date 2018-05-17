@@ -6,6 +6,9 @@ from math import isnan
 from os import listdir
 from os.path import isfile, join
 
+import logging
+logger = logging.getLogger('root')
+
 
 RSID_COLUMN = 'Rsid'
 REF_COLUMN = 'Ref'
@@ -64,7 +67,7 @@ def __combine_snp_data(snp_data_dir):
                                           FILTER_COLUMN, GENEINFO_COLUMN])
 
         except Exception as e:
-            print '[WARNING] "{}" VCF file invalid. Skipping it. Reason: {}'.format(snp_file_path, e)
+            logger.warning('"{}" VCF file invalid. Skipping it. Reason: {}'.format(snp_file_path, e))
             continue
 
         # Remove columns that are not needed

@@ -4,6 +4,8 @@ import re
 import numpy as np
 import pandas as pd
 
+import logging
+logger = logging.getLogger('root')
 
 MUTATION_LEVELS = ['nm', 'pm', 'fm']
 
@@ -35,14 +37,15 @@ class UserPhenotypes:
         no_pheno = []
         users = []
         duplicates = []
+        multi_pheno = []
 
         for user_file_name in self.get_user_geno_files(user_data_dir):
             # OpenSNP sometimes contains two genomic files for the same user Id. This is used to avoid duplicate
             # information for a user. The first file for the user is used.
             user = User(user_data_dir, user_file_name)
             if user.id in users:
-                print '[WARNING] User {} already is associated with a genomic file. Ignoring file "{}"'\
-                    .format(user.id, user.file_path)
+                logger.warning('User {} already is associated with a genomic file. Ignoring file "{}"' \
+                               .format(user.id, user.file_path))
                 duplicates.append(user.id)
                 continue
 
@@ -56,8 +59,9 @@ class UserPhenotypes:
                 # handle duplicate entries that all have the same value
                 phenotype_row = np.unique(phenotype_row)
                 if len(phenotype_row) > 1:
-                    print '[WARNING]: Found {} phenotype classifications for user {}. Each user should ' \
-                          'have a single classification.'.format(phenotype_row.size, user.id)
+                    logger.warning('Found {} phenotype classifications for user {}. Each user should '
+                                   'have a single classification.'.format(phenotype_row.size, user.id))
+                    multi_pheno.append(user.id)
                     continue
 
             phenotype = phenotype_row[0]
@@ -72,9 +76,13 @@ class UserPhenotypes:
             users.append(user.id)
 
         if len(no_pheno) > 0:
-            print '[WARNING]: No phenotype classification for users {}.'.format(no_pheno)
+            logger.warning('No phenotype classification for {} users {}.'.format(len(no_pheno), no_pheno))
         if len(duplicates) > 0:
-            print '[WARNING]: Multiple genomic files found for {} users: {}.'.format(len(duplicates), duplicates)
+            logger.warning('Multiple genotype files found for {} users: {}.'
+                           .format(len(duplicates), duplicates))
+        if len(multi_pheno) > 0:
+            logger.warning('Multiple phenotypes found for {} users: {}.'
+                           .format(len(multi_pheno), multi_pheno))
 
         return phenotypes_map
 
@@ -154,8 +162,8 @@ class User:
             else:
                 raise ValueError('Only 23andMe and Ancestry.com data formats are supported')
         except Exception as e:
-            print '[WARNING] {} does not contain valid user genomic data. Skipping user. ' \
-                  'Reason: {}'.format(self.file_path, e)
+            logger.warning('{} does not contain valid user genomic data. Skipping user. ' \
+                           'Reason: {}'.format(self.file_path, e))
             return pd.DataFrame()
 
         data_person.columns = ['Rsid', 'Genotype']
@@ -163,8 +171,8 @@ class User:
         # drop public RSIDs. It was found that some genomic files from OpenSNP have duplicate RSID values
         duplicates = data_person[data_person.duplicated(subset=['Rsid'])].values
         if len(duplicates) > 0:
-            print '[WARNING] User {} has duplicate RSID values. The duplicates will be removed.{}{}'\
-                .format(os.linesep, self.id, duplicates)
+            logger.warning('User {} has duplicate RSID values. The duplicates will be removed.{}{}'\
+                           .format(os.linesep, self.id, duplicates))
             data_person.drop_duplicates(subset=['Rsid'], inplace=True)
 
         data = pd.merge(data_person, snp_details[['Rsid', 'Ref', 'Alt']], how=how, on=["Rsid"], right_index=True)
@@ -214,6 +222,6 @@ class User:
 
             return changes
         except Exception as e:
-            print '[WARNING] Invalid SNP for user {}. Marking invalid.{}Row: {}.' \
-                  '{}Reason: {}'.format(self.id, os.linesep, row, os.linesep, e)
+            logger.warning('Invalid SNP for user {}. Marking invalid.{}Row: {}.' \
+                           '{}Reason: {}'.format(self.id, os.linesep, row, os.linesep, e))
             return np.nan

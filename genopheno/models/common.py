@@ -37,8 +37,8 @@ def build_model(data_set, data_split, no_interactions, negative, model, cross_va
     x = data_set.drop(labels=['phenotype'], axis=1)
     snp_columns = x.columns.values
     if (max_snps is not None) and (len(snp_columns) > max_snps):
-        logger.info('[WARNING] Too many model SNPs ({}, configured max: {}). Dropping extra SNPs.'
-                    .format(len(snp_columns), max_snps))
+        logger.warning('Too many model SNPs ({}, configured max: {}). Dropping extra SNPs.'
+                       .format(len(snp_columns), max_snps))
         snp_columns = snp_columns[:max_snps]
         x = x[snp_columns]
     model_config['snps'] = snp_columns
