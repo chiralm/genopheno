@@ -1,9 +1,11 @@
 import argparse
 import pandas as pd
-import numpy as np
 from preprocessing import snp
 from util import *
 from preprocessing.users import UserPhenotypes
+
+import logging.config
+logger = logging.getLogger('root')
 
 
 def __merge_user_mutations(users, phenotype, snp_details):
@@ -28,8 +30,8 @@ def __merge_user_mutations(users, phenotype, snp_details):
         if not user_data.empty:
             return pd.merge(all_user_data, user_data, on=['Rsid'], how='outer')
         else:
-            print '[WARNING] User {} did not have any SNPs in the SNP database. ' \
-                  'Skipping the user.'.format(user_to_merge.id)
+            logger.warning('User {} did not have any SNPs in the SNP database. '
+                           'Skipping the user.'.format(user_to_merge.id))
             return all_user_data
 
     for i in range(len(users)):
@@ -113,6 +115,8 @@ def run(user_data_dir, snp_data_dir, known_pheno_file, output_dir):
     # Make sure output directory exists before doing work
     clean_output(output_dir)
 
+    setup_logger(output_dir, "preprocess")
+
     def timed_run():
         # Build SNPs data frame
         snp_details = timed_invoke('building SNP data frame', lambda: snp.build_database(snp_data_dir, output_dir))
@@ -126,17 +130,20 @@ def run(user_data_dir, snp_data_dir, known_pheno_file, output_dir):
             :param phenotype: The phenotype of the users
             :param users: The users with the phenotype
             """
+            logger.info('{} Users for Phenotype {}'.format(len(users), phenotype))
             all_user_data = __merge_user_mutations(users, phenotype, snp_details)
             all_user_data = timed_invoke('calculating mutation percentages', lambda: __calc_snp_percents(all_user_data))
             timed_invoke("saving preprocessed file for phenotype '{}'".format(phenotype),
                          lambda: __write_final(phenotype, all_user_data, output_dir))
+            n_invalid_user_files = len(users) - all_user_data.shape[1] - 2  # exclude RSID and Gene_info columns
+            logger.info("{} invalid user files found for phenotype '{}'".format(n_invalid_user_files, phenotype))
             return all_user_data
 
         timed_invoke('building final data structure', lambda: users_phenotypes.reduce_phenotypes(reducer))
 
     timed_invoke('preprocessing data', lambda: timed_run())
 
-    print 'Output written to "{}"'.format(output_dir)
+    logger.info('Output written to "{}"'.format(output_dir))
 
 
 if __name__ == '__main__':
@@ -146,7 +153,7 @@ if __name__ == '__main__':
         "--user-geno",
         "-u",
         metavar="<directory path>",
-        default="resources/data/users",
+        default="resources" + os.sep + "data" + os.sep + "users",
         help="The directory containing user genomic data. Each file contains data for one user."
              " 23andMe and Ancestry.com data formats are supported."
              " File names must start with the numeric user ID followed by an underscore and end"
@@ -161,7 +168,7 @@ if __name__ == '__main__':
         "--known-phenos",
         "-p",
         metavar="<file path>",
-        default="resources/data/known_phenotypes.csv",
+        default="resources" + os.sep + "data" + os.sep + "known_phenotypes.csv",
         help="The file path to the file that contains the known phenotypes. This is used to train the model."
              " This must be a CSV file with the following format with columns user_id and phenotype."
              "\nuser_id is the numeric user ID. The user ID should match a user ID in the --user-geno directory."
@@ -179,7 +186,7 @@ if __name__ == '__main__':
         "--snp",
         "-s",
         metavar="<directory path>",
-        default="resources/data/snp",
+        default="resources" + os.sep + "data" + os.sep + "snp",
         help="The directory containing the SNP data for each genome. The supported file format is VCF. Each file"
              "must end in .vcf. Optionally, the files can be compressed with gzip and must end in .gz."
              "\n\nDefault: resources/data/snp"
@@ -189,7 +196,7 @@ if __name__ == '__main__':
         "--output",
         "-o",
         metavar="<directory path>",
-        default="resources/data/preprocessed",
+        default="resources" + os.sep + "data" + os.sep + "preprocessed",
         help="The directory that the out files should be written to. This will include all files required for the"
              "machine learning input."
              "\n\nDefault: resources/data/preprocessed"
