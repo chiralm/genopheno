@@ -3,9 +3,6 @@
 This project applies machine learning to publicly available genomic data to predict phenotype and identify Single Nucleotide Polymorphisms (SNPs) that are most influential.
 The method requires no domain knowledge and can be used with any binary phenotype classification.
 
-As a proof of concept, this application was used to predict eye color using 436 users from self-reported data on openSNP.
-Using the default settings, the model achieved a 92% accuracy and 0.95 AUC for the ROC curve.
-
 The model correctly identified HERC2 as the most influential gene and identified the polygenic relationship between genes
 HERC2 and OCA2.
 
@@ -73,6 +70,8 @@ The application is broken down into three steps, each with their own command-lin
 2. Building the model. This step uses the preprocessed data to build a model to predict phenotype.
 3. Using the model. This step uses the model from the previous step to predict phenotype for additional users.
 
+![overview](./images/overview.png)
+
 The commands in this section assume the virtual environment from the prerequisites step is activated and that the
 current directory genopheno/genopheno (the root package directory).
 
@@ -139,19 +138,20 @@ python model.py --help
 |**--preprocessed**|**-p**|The directory containing the output data from the initialization phase. Default: resources/full_data/preprocessed|
 |**--invalid-snp-thresh**|**-it**|The maximum percentage of missing or invalid user observations a SNP can have before it is not considered as a feature in the model|
 |**--invalid-user-thresh**|**-iu**|The maximum percentage of missing or invalid SNP observations a user can have before it is not considered as a valid example in the model.|
-|**--absolute-diff-thresh**|**-adt**|The difference threshold required for the SNP to be selected, in percentage points.|
-|**--relative-diff-thresh**|**-rdt**|The relative difference threshold. This is the absolute difference in mutation percentage divided by the minimum mutation value out of the two phenotypes.|
+|**--relative-diff-thresh**|**-rdt**|The relative difference in percent of users with a particular genotype, used for SNP selection. SNPs will be selected such that the lower percent value between the two phenotype groups is less than or equal to (1 - (relative_diff_thresh/100)) * higher. |
 |**--split**|**s**|The percentage of users to use as test data.|
 |**--no-interactions**|**-ni**|If set then interactions will not be included in the model.|
 |**--negative**|**-n**|The phenotype value that should be considered as the negative case.|
 |**--max-snps**|**-ms**|The maximum number of SNPs to include in the model|
+|**--model**|**-m**|The type of model to use.`en`=Elastic Net, `dt`=Decision Tree, `rf`=Random Forest. Default: `rf`|
+|**--cross-validation**|**-cv**|Number of folds for k-fold cross validation. Default: 3|
+|**--output**|**-o**|The directory that the output files should be written to. This will include all files required for the machine learning input.|
 
 ### Output
 
-After the model is built, a ROC curve and confusion matrix will be written to the output directory (roc.png and confusion_matrix.txt) to evaluate the model.
+After the model is built, if elastic net is used, an ROC curve and confusion matrix will be written to the output directory (roc.png and confusion_matrix.txt) to evaluate the model.
 
-
-The model features, sorted by influence, will also be written to the output (features.csv). For example:
+For elastic net, decision tree, and random forest, the model features, sorted by influence, will be written to the output. For example:
 
 ```
 intercept: [104.24800058]
