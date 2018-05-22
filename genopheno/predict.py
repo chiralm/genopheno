@@ -6,7 +6,10 @@ from preprocessing.users import UserPhenotypes, User
 from preprocessing.snp import extract_rsid, format_snps
 from models.common import build_model_desc
 from patsy import dmatrix
-from util import timed_invoke, expand_path, clean_output
+from util import setup_logger, timed_invoke, expand_path, clean_output
+
+import logging.config
+logger = logging.getLogger('root')
 
 
 def run(users_dir, init_dir, model_dir, output_dir):
@@ -24,6 +27,9 @@ def run(users_dir, init_dir, model_dir, output_dir):
 
     # Make sure output directory exists before doing work
     clean_output(output_dir)
+
+    # Setup console and file loggers
+    setup_logger(output_dir, "predict")
 
     # Read SNP data
     snp_details = pd.read_csv(os.path.join(init_dir, 'snp_database.csv.gz'), compression='gzip')
