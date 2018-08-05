@@ -132,7 +132,6 @@ def run(user_data_dir, snp_data_dir, known_pheno_file, output_dir):
             """
             logger.info('{} Users for Phenotype {}'.format(len(users), phenotype))
             all_user_data = __merge_user_mutations(users, phenotype, snp_details)
-            all_user_data = timed_invoke('calculating mutation percentages', lambda: __calc_snp_percents(all_user_data))
             timed_invoke("saving preprocessed file for phenotype '{}'".format(phenotype),
                          lambda: __write_final(phenotype, all_user_data, output_dir))
             n_invalid_user_files = len(users) - all_user_data.shape[1] - 2  # exclude RSID and Gene_info columns

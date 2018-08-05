@@ -53,7 +53,8 @@ def expand_path(path):
     :return: The expanded path
     """
     new_path = os.path.expanduser(path)
-    return os.path.expandvars(new_path)
+    new_path_with_vars = os.path.expandvars(new_path)
+    return os.path.abspath(new_path_with_vars)
 
 
 def clean_output(output_dir):
