@@ -7,7 +7,7 @@ import logging
 import logging.config
 
 from models.snp_selectors import mutation_difference
-from models import elastic_net, decision_tree, random_forest
+from models import elastic_net, decision_tree, random_forest, model_data
 from util import timed_invoke, expand_path, clean_output, setup_logger
 
 logger = logging.getLogger('root')
@@ -78,6 +78,7 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thr
         raise ValueError('Model Id "{}" is not valid'.format(model_id))
 
     phenotypes = timed_invoke('reading the preprocessed files', lambda: __read_phenotype_input(preprocessed_dir))
+    model_data_builder = model_data.ModelDataBuilder(phenotypes, data_split)
 
     data_set = timed_invoke('creating model data set', lambda: mutation_difference.create_dataset(
                                phenotypes, invalid_thresh, invalid_user_thresh, relative_diff_thresh)
