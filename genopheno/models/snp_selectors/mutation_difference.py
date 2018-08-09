@@ -35,6 +35,8 @@ def __remove_missing_data(pheno, snp_data, invalid_thresh):
     logger.info("{} ({:.2f}%) SNPs removed due to too many missing user observations for phenotype '{}'"
                 .format(snp_count - snp_data.shape[0], float(snp_count - snp_data.shape[0]) / snp_count * 100, pheno))
 
+    return snp_data
+
 
 def __filter_snps(row, abs_diff_thresh, relative_diff_thresh, selected_snps):
     """
@@ -189,7 +191,7 @@ def __format_selected_snps(pheno_label, pheno_df, selected_snps):
     return transposed_data
 
 
-def create_dataset(phenotypes, invalid_thresh, invalid_user_thresh, relative_diff_thresh):
+def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh):
     """
     Function to return those SNPs that satisfy a criterion to check for differences between blue and brown SNPs
     :param phenotypes: A map of phenotypes where the key is the phenotype ID and the value is the phenotype data frame.
@@ -208,12 +210,15 @@ def create_dataset(phenotypes, invalid_thresh, invalid_user_thresh, relative_dif
     # for training and testing drop unselected SNPs
     # for training and testing data set remove users that do not have enough SNPs
 
+    # Filter out SNPs that do not have enough user observations in training data
+    model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_missing_data(pheno, pheno_df, invalid_thresh))
+    # for pheno, pheno_df in phenotypes.iteritems():
+    #     __remove_missing_data(pheno, pheno_df, invalid_thresh)
 
-    # Filter out SNPs that do not have enough user observations
-    for pheno, pheno_df in phenotypes.iteritems():
-        __remove_missing_data(pheno, pheno_df, invalid_thresh)
+    # Calculate mutation percentages for SNPs in the training data
+    model_data_builder.apply_to_training(lambda pheno, pheno_df: __calc_snp_percents(pheno_df))
 
-    # Select snps based on mutation differences between phenotypes
+    # Select snps based on mutation differences between phenotypes in training data
     selected_snps = __identify_mutated_snps(phenotypes, relative_diff_thresh)
     logger.info('{} SNPs with mutation differences identified'.format(len(selected_snps)))
 
@@ -234,3 +239,45 @@ def create_dataset(phenotypes, invalid_thresh, invalid_user_thresh, relative_dif
     logger.info("Model Data contains {} users and {} SNPs".format(merged.shape[0], snp_count))
 
     return merged
+
+
+def __calc_snp_percents(user_mutations):
+    """
+    Calculates the average mutation percentage (no, partial and full mutations) for each SNP
+    :param user_mutations: The data frame containing user mutations
+    :return: The mutations data frame with mutation percentages
+    """
+    zero_pct = []
+    one_pct = []
+    two_pct = []
+
+    def count_snps(row):
+        zero_count = row.between(left=0, right=0).sum()
+        one_count = row.between(left=1, right=1).sum()
+        two_count = row.between(left=2, right=2).sum()
+
+        # zero_count = 0
+        # one_count = 0
+        # two_count = 0
+        #
+        # # count number of mutations for each gene
+        # for mut_count in row[2::].values:
+        #     if mut_count == 0:
+        #         zero_count += 1
+        #     elif mut_count == 1:
+        #         one_count += 1
+        #     elif mut_count == 2:
+        #         two_count += 1
+
+        # calculate the percents of each mutation
+        total = zero_count + one_count + two_count
+        zero_pct.append(0 if zero_count == 0 else float(zero_count) / total * 100)
+        one_pct.append(0 if one_count == 0 else float(one_count) / total * 100)
+        two_pct.append(0 if two_count == 0 else float(two_count) / total * 100)
+
+    user_mutations.apply(count_snps, axis=1)
+    user_mutations['pct_fm'] = two_pct
+    user_mutations['pct_nm'] = zero_pct
+    user_mutations['pct_pm'] = one_pct
+
+    return user_mutations

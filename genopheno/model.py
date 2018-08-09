@@ -81,7 +81,7 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thr
     model_data_builder = model_data.ModelDataBuilder(phenotypes, data_split)
 
     data_set = timed_invoke('creating model data set', lambda: mutation_difference.create_dataset(
-                               phenotypes, invalid_thresh, invalid_user_thresh, relative_diff_thresh)
+                               model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh)
                             )
     timed_invoke('building model', lambda: build_model(data_set, data_split, no_interactions, negative, max_snps,
                                                        cross_validation, output_dir))

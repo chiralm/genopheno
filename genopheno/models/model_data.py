@@ -28,5 +28,6 @@ class ModelDataBuilder:
 
         return pheno_df.loc[:, test_users], pheno_df.loc[:, train_users]
 
-    def save(self, path):
-        pass
+    def apply_to_training(self, func):
+        for key in self.training.keys():
+            self.training[key] = func(key, self.training[key])
