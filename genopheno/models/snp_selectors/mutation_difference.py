@@ -212,14 +212,12 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
 
     # Filter out SNPs that do not have enough user observations in training data
     model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_missing_data(pheno, pheno_df, invalid_thresh))
-    # for pheno, pheno_df in phenotypes.iteritems():
-    #     __remove_missing_data(pheno, pheno_df, invalid_thresh)
 
     # Calculate mutation percentages for SNPs in the training data
     model_data_builder.apply_to_training(lambda pheno, pheno_df: __calc_snp_percents(pheno_df))
 
     # Select snps based on mutation differences between phenotypes in training data
-    selected_snps = __identify_mutated_snps(phenotypes, relative_diff_thresh)
+    selected_snps = model_data_builder.reduce_training(lambda phenotypes: __identify_mutated_snps(phenotypes, relative_diff_thresh))
     logger.info('{} SNPs with mutation differences identified'.format(len(selected_snps)))
 
     # Generate data frame for each phenotype using the selected SNPs
