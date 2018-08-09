@@ -200,6 +200,15 @@ def create_dataset(phenotypes, invalid_thresh, invalid_user_thresh, relative_dif
     :return: A DataFrame where each row is a user and each column is a SNP.
     The value is the number of mutations (0,1,2).
     """
+    # todo
+    # split data set
+    # for training set filter out SNPs with too many missing observations
+    # for training set calculate percentages
+    # for training set select feature SNPs
+    # for training and testing drop unselected SNPs
+    # for training and testing data set remove users that do not have enough SNPs
+
+
     # Filter out SNPs that do not have enough user observations
     for pheno, pheno_df in phenotypes.iteritems():
         __remove_missing_data(pheno, pheno_df, invalid_thresh)

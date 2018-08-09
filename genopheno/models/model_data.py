@@ -8,8 +8,9 @@ class ModelDataBuilder:
         self.testing = {}
 
         for pheno, pheno_df in phenotypes.iteritems():
-            self.__split_test_train(pheno_df)
-            # self.training[pheno] = test_sample
+            test_df, train_df = self.__split_test_train(pheno_df)
+            self.testing[pheno] = test_df
+            self.training[pheno] = train_df
 
     def __split_test_train(self, pheno_df):
         # Get list of users ids that we have genotypes for
@@ -25,8 +26,7 @@ class ModelDataBuilder:
         test_users = user_ids[:test_count]
         train_users = user_ids[test_count:]
 
-        # return test and training dataset
-        # todo
+        return pheno_df.loc[:, test_users], pheno_df.loc[:, train_users]
 
     def save(self, path):
         pass
