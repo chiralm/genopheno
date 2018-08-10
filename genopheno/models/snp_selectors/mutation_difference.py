@@ -217,26 +217,38 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     model_data_builder.apply_to_training(lambda pheno, pheno_df: __calc_snp_percents(pheno_df))
 
     # Select snps based on mutation differences between phenotypes in training data
-    selected_snps = model_data_builder.reduce_training(lambda phenotypes: __identify_mutated_snps(phenotypes, relative_diff_thresh))
+    selected_snps = model_data_builder.reduce_training(
+        lambda phenotypes: __identify_mutated_snps(phenotypes, relative_diff_thresh))
     logger.info('{} SNPs with mutation differences identified'.format(len(selected_snps)))
 
     # Generate data frame for each phenotype using the selected SNPs
-    final_datasets = []
-    for pheno_key, pheno_df in phenotypes.items():
-        final_datasets.append(__format_selected_snps(pheno_key, pheno_df, selected_snps))
+    model_data_builder.apply(lambda pheno, pheno_df: __format_selected_snps(pheno, pheno_df, selected_snps))
+    # final_datasets = []
+    # for pheno_key, pheno_df in phenotypes.items():
+    #     final_datasets.append(__format_selected_snps(pheno_key, pheno_df, selected_snps))
 
-    # Merge and return aggregate data set
-    merged = pd.concat(final_datasets)
+    # # Merge and return aggregate data set
+    # merged = pd.concat(final_datasets)
 
     # Remove users that do not have enough observations
-    user_count = merged.shape[0]
-    snp_count = merged.shape[1] - 1
-    min_obs = math.ceil((1 - invalid_user_thresh / float(100)) * snp_count)
-    merged.dropna(axis=0, thresh=min_obs, inplace=True)
-    logger.info('{} users dropped due to too many missing observations'.format(user_count - merged.shape[0]))
-    logger.info("Model Data contains {} users and {} SNPs".format(merged.shape[0], snp_count))
+    model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_users_with_lack_of_data(pheno, pheno_df, invalid_user_thresh))
+    # user_count = merged.shape[0]
+    # snp_count = merged.shape[1] - 1
+    # min_obs = math.ceil((1 - invalid_user_thresh / float(100)) * snp_count)
+    # merged.dropna(axis=0, thresh=min_obs, inplace=True)
+    # logger.info('{} users dropped due to too many missing observations'.format(user_count - merged.shape[0]))
+    # logger.info("Model Data contains {} users and {} SNPs".format(merged.shape[0], snp_count))
 
     return merged
+
+
+def __remove_users_with_lack_of_data(pheno, pheno_df, invalid_user_thresh):
+    user_count = pheno_df.shape[0]
+    snp_count = pheno_df.shape[1] - 1
+    min_obs = math.ceil((1 - invalid_user_thresh / float(100)) * snp_count)
+    pheno_df.dropna(axis=0, thresh=min_obs, inplace=True)
+    logger.info('{} users dropped due to too many missing observations for {}'.format(user_count - pheno_df.shape[0], pheno))
+    logger.info("Model Data contains {} users and {} SNPs for {}".format(pheno_df.shape[0], snp_count, pheno))
 
 
 def __calc_snp_percents(user_mutations):

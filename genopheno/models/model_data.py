@@ -7,6 +7,7 @@ class ModelDataBuilder:
         self._training = {}
         self._testing = {}
 
+        # split into testing and training data
         for pheno, pheno_df in phenotypes.iteritems():
             test_df, train_df = self.__split_test_train(pheno_df)
             self._testing[pheno] = test_df
@@ -26,11 +27,26 @@ class ModelDataBuilder:
         test_users = user_ids[:test_count]
         train_users = user_ids[test_count:]
 
-        return pheno_df.loc[:, test_users], pheno_df.loc[:, train_users]
+        train_users_df = pheno_df.loc[:, train_users]
+        test_users_df = pheno_df.loc[:, test_users]
+
+        # add back the gene info column
+        train_users_df["Gene_info"] = pheno_df["Gene_info"]
+        test_users_df["Gene_info"] = pheno_df["Gene_info"]
+
+        return test_users_df, train_users_df
 
     def apply_to_training(self, func):
         for key in self._training.keys():
             self._training[key] = func(key, self._training[key])
+
+    def apply_to_testing(self, func):
+        for key in self._testing.keys():
+            self._testing[key] = func(key, self._training[key])
+
+    def apply(self, func):
+        self.apply_to_training(func)
+        self.apply_to_testing(func)
 
     def reduce_training(self, reducer):
         return reducer(self._training)
