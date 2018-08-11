@@ -44,44 +44,6 @@ def __merge_user_mutations(users, phenotype, snp_details):
     return merged_user_data
 
 
-# def __calc_snp_percents(user_mutations):
-#     """
-#     Calculates the average mutation percentage (no, partial and full mutations) for each SNP
-#     :param user_mutations: The data frame containing user mutations
-#     :return: The mutations data frame with mutation percentages
-#     """
-#     zero_pct = []
-#     one_pct = []
-#     two_pct = []
-#
-#     def count_snps(row):
-#         zero_count = 0
-#         one_count = 0
-#         two_count = 0
-#
-#         # count number of mutations for each gene
-#         for mut_count in row[2::].values:
-#             if mut_count == 0:
-#                 zero_count += 1
-#             elif mut_count == 1:
-#                 one_count += 1
-#             elif mut_count == 2:
-#                 two_count += 1
-#
-#         # calculate the percents of each mutation
-#         total = zero_count + one_count + two_count
-#         zero_pct.append(0 if zero_count == 0 else float(zero_count) / total * 100)
-#         one_pct.append(0 if one_count == 0 else float(one_count) / total * 100)
-#         two_pct.append(0 if two_count == 0 else float(two_count) / total * 100)
-#
-#     user_mutations.apply(count_snps, axis=1)
-#     user_mutations['pct_fm'] = two_pct
-#     user_mutations['pct_nm'] = zero_pct
-#     user_mutations['pct_pm'] = one_pct
-#
-#     return user_mutations
-
-
 def __write_final(phenotype, all_user_data, output_dir):
     """
     Writes the user SNP data to a CSV file
