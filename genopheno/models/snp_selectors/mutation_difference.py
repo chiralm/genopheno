@@ -169,26 +169,27 @@ def __identify_mutated_snps(phenotypes, relative_diff_thresh):
     return selected_snps
 
 
-def __format_selected_snps(pheno_label, pheno_df, selected_snps):
+def __apply_selected_snps(pheno_df, selected_snps):
     """
     Builds the phenotype DataFrame used for the machine learning model based on the selected SNPs
     :param pheno_df: The DataFrame for the phenotype with the user mutation data
     :param selected_snps: A list of selected SNP RSIDs
-    :param pheno_label: The phenotype label (i.e. 'Brown' for eye color)
     :return: The DataFrame for the selected SNPs
     """
     # Filter out SNPs that have not been selected
     snp_data = pheno_df.loc[selected_snps]
     snp_data.index = 'gene_' + snp_data['Gene_info'].str.replace(r'\W', '_') + '_' + snp_data.index
 
-    # Drop the mutation percentages and gene info columns because they are no longer needed
-    snp_data.drop(labels=['Gene_info', 'pct_fm', 'pct_nm', 'pct_pm'], axis=1, inplace=True)
+    return snp_data
 
-    # Transpose the data and add columns for user Id and phenotype
-    transposed_data = snp_data.transpose()
-    transposed_data['phenotype'] = pheno_label
-
-    return transposed_data
+    # # Drop the mutation percentages and gene info columns because they are no longer needed
+    # snp_data.drop(labels=['Gene_info', 'pct_fm', 'pct_nm', 'pct_pm'], axis=1, inplace=True)
+    #
+    # # Transpose the data and add columns for user Id and phenotype
+    # transposed_data = snp_data.transpose()
+    # transposed_data['phenotype'] = pheno_label
+    #
+    # return transposed_data
 
 
 def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh):
@@ -221,8 +222,15 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
         lambda phenotypes: __identify_mutated_snps(phenotypes, relative_diff_thresh))
     logger.info('{} SNPs with mutation differences identified'.format(len(selected_snps)))
 
+    # todo truncate snps if too many
+
     # Generate data frame for each phenotype using the selected SNPs
-    model_data_builder.apply(lambda pheno, pheno_df: __format_selected_snps(pheno, pheno_df, selected_snps))
+    model_data_builder.apply(lambda pheno, pheno_df: __apply_selected_snps(pheno_df, selected_snps))
+
+    # Remove users who are missing too many observations
+    min_snps = math.ceil((1 - invalid_user_thresh / float(100)) * len(selected_snps))
+    model_data_builder.apply(lambda pheno, pheno_df: __remove_users_with_missing_snps(pheno_df, min_snps))
+
     # final_datasets = []
     # for pheno_key, pheno_df in phenotypes.items():
     #     final_datasets.append(__format_selected_snps(pheno_key, pheno_df, selected_snps))
@@ -231,7 +239,10 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     # merged = pd.concat(final_datasets)
 
     # Remove users that do not have enough observations
-    model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_users_with_lack_of_data(pheno, pheno_df, invalid_user_thresh))
+    # todo
+
+    # model_data_builder.apply(
+    #     lambda pheno, pheno_df: __remove_users_with_lack_of_data(pheno, pheno_df, invalid_user_thresh))
     # user_count = merged.shape[0]
     # snp_count = merged.shape[1] - 1
     # min_obs = math.ceil((1 - invalid_user_thresh / float(100)) * snp_count)
@@ -239,16 +250,12 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     # logger.info('{} users dropped due to too many missing observations'.format(user_count - merged.shape[0]))
     # logger.info("Model Data contains {} users and {} SNPs".format(merged.shape[0], snp_count))
 
-    return merged
+    return model_data_builder.build()
 
 
-def __remove_users_with_lack_of_data(pheno, pheno_df, invalid_user_thresh):
-    user_count = pheno_df.shape[0]
-    snp_count = pheno_df.shape[1] - 1
-    min_obs = math.ceil((1 - invalid_user_thresh / float(100)) * snp_count)
-    pheno_df.dropna(axis=0, thresh=min_obs, inplace=True)
-    logger.info('{} users dropped due to too many missing observations for {}'.format(user_count - pheno_df.shape[0], pheno))
-    logger.info("Model Data contains {} users and {} SNPs for {}".format(pheno_df.shape[0], snp_count, pheno))
+def __remove_users_with_missing_snps(pheno_df, min_snps):
+    pheno_df.dropna(axis=1, thresh=min_snps, inplace=True)
+    return pheno_df
 
 
 def __calc_snp_percents(user_mutations):
