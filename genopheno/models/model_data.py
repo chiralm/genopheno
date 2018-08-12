@@ -95,7 +95,8 @@ class ModelDataBuilder:
 
     def __finalize_df(self, pheno, pheno_df):
         # todo remove non-user columns
-        columns = pheno_df.columns.values
+        columns_to_drop = filter(lambda x: not x.isdigit(), pheno_df.columns.values)
+        pheno_df.drop(labels=columns_to_drop, axis=1, inplace=True)
 
         # transpose and add the phenotype label
         transposed_data = pheno_df.transpose()

@@ -33,31 +33,15 @@ def build_model(model_data, no_interactions, negative, model, cross_validation, 
     """
     model_config = {}
 
-    # Split the data into testing and training data
-    # x = data_set.drop(labels=['phenotype'], axis=1)
-    # snp_columns = x.columns.values
-    # if (max_snps is not None) and (len(snp_columns) > max_snps):
-    #     logger.warning('Too many model SNPs ({}, configured max: {}). Dropping extra SNPs.'
-    #                    .format(len(snp_columns), max_snps))
-    #     snp_columns = snp_columns[:max_snps]
-    #     x = x[snp_columns]
-    # model_config['snps'] = snp_columns
-    # y = data_set['phenotype']
-    # x_train, x_test, y_train, y_test = train_test_split(
-    #     x, y, test_size=data_split/float(100), random_state=1, stratify=y
-    # )
-
-    # Convert classifications to 0 and 1
-    #
-    # Do this after the test train split because while the ratio of each phenotype is the same in the split, different
-    # rows are chosen based on which phenotype is assigned a 0 and 1. Do this after the split means consistent rows
-    # will be selected regardless of which phenotype is assigned as the negative.
     y_train = model_data.training["phenotype"]
     y_test = model_data.testing["phenotype"]
     pheno_map = __pheno_to_binary(y_train, y_test, negative)
     model_config['pheno_map'] = pheno_map
 
     # Replace nan values
+    x_train = model_data.training.drop(labels=['phenotype'], axis=1)
+    x_test = model_data.testing.drop(labels=['phenotype'], axis=1)
+    snp_columns = x_train.columns.values
     imputer, x_train, x_test = __impute_data(x_train, x_test)
     model_config['imputer'] = imputer
 
