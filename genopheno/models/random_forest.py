@@ -5,7 +5,7 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 
 
-def build_model(dataset, data_split, no_interactions, negative, cross_validation, output_dir):
+def build_model(model_data, no_interactions, negative, cross_validation, output_dir):
     model_eval = {
         'features': save_features
     }
@@ -38,8 +38,7 @@ def build_model(dataset, data_split, no_interactions, negative, cross_validation
     }
 
     common.build_model(
-        dataset,
-        data_split,
+        model_data,
         True,
         negative,
         RandomForestClassifier(n_jobs=-1),
