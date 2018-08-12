@@ -67,6 +67,7 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thr
     """
     # Expand file paths
     preprocessed_dir = expand_path(preprocessed_dir)
+    output_dir = expand_path(output_dir)
 
     # Make sure output directory exists before doing work
     clean_output(output_dir)

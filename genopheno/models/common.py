@@ -1,7 +1,6 @@
 import sklearn.metrics as skm
 import matplotlib as mp
-mp.use('Agg')
-
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,10 +8,10 @@ import pickle
 from patsy import ModelDesc, EvalFactor, Term, dmatrix
 from os import linesep, path
 from sklearn.preprocessing import Imputer
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_curve, auc
 
-import logging
+mp.use('Agg')
 logger = logging.getLogger("root")
 
 
@@ -20,13 +19,11 @@ def build_model(model_data, no_interactions, negative, model, cross_validation, 
                 param_grid={}, model_eval={}):
     """
     Builds a model for the data set
-    :param data_set: The data set (training and testing)
-    :param data_split: The percentage of data that should be used for testing
+    :param model_data: The data set (training and testing)
     :param no_interactions: If false interactions aren't included in the model
     :param negative: The negative phenotype label
     :param model: The model to use for training and testing the data
     :param cross_validation: The number of folds for k-fold cross validation
-    :param max_snps: The maximum number of SNPs for the model to include
     :param output_dir: The directory to write the model artifacts in
     :param param_grid: The parameter matrix for the model
     :param model_eval: A dictionary of optional model evaluation methods
