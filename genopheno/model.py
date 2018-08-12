@@ -79,7 +79,8 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thr
     if not build_model:
         raise ValueError('Model Id "{}" is not valid'.format(model_id))
 
-    phenotypes = timed_invoke('reading the preprocessed files', lambda: __read_phenotype_input(preprocessed_dir))
+    phenotypes = timed_invoke('reading the preprocessed files from {}'.format(preprocessed_dir),
+                              lambda: __read_phenotype_input(preprocessed_dir))
     model_data_builder = ModelDataBuilder(phenotypes, data_split)
 
     model_data = timed_invoke('creating model data set', lambda: mutation_difference.create_dataset(

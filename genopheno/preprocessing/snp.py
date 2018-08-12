@@ -36,7 +36,6 @@ def build_database(snp_data_dir, output_dir):
 
     # Remove all SNPs with missing gene info
     snp_details.dropna(subset=[GENEINFO_COLUMN], inplace=True)
-    snp_details = snp_details.iloc[1:100,:]
 
     # Save the snp data frame. It is needed in the prediction step.
     snp_details.to_csv(os.path.join(output_dir, 'snp_database.csv.gz'), compression='gzip', index=False)
