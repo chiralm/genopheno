@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 import math
-
 import logging
+from genopheno.util import timed_invoke
 logger = logging.getLogger("root")
 
 
@@ -198,7 +198,8 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_missing_data(pheno, pheno_df, invalid_thresh))
 
     # Calculate mutation percentages for SNPs in the training data
-    model_data_builder.apply_to_training(lambda pheno, pheno_df: __calc_snp_percents(pheno_df))
+    timed_invoke('calculating mutation percentages for each SNP',
+                 lambda: model_data_builder.apply_to_training(__calc_snp_percents))
 
     # Select snps based on mutation differences between phenotypes in training data
     selected_snps = model_data_builder.reduce_training(
@@ -225,10 +226,10 @@ def __remove_users_with_missing_snps(pheno_df, min_snps):
     return pheno_df
 
 
-def __calc_snp_percents(user_mutations):
+def __calc_snp_percents(pheno, pheno_df):
     """
     Calculates the average mutation percentage (no, partial and full mutations) for each SNP
-    :param user_mutations: The data frame containing user mutations
+    :param pheno_df: The data frame containing user mutations
     :return: The mutations data frame with mutation percentages
     """
     zero_pct = []
@@ -236,22 +237,22 @@ def __calc_snp_percents(user_mutations):
     two_pct = []
 
     def count_snps(row):
-        zero_count = row.between(left=0, right=0).sum()
-        one_count = row.between(left=1, right=1).sum()
-        two_count = row.between(left=2, right=2).sum()
+        # zero_count = row.between(left=0, right=0).sum()
+        # one_count = row.between(left=1, right=1).sum()
+        # two_count = row.between(left=2, right=2).sum()
 
-        # zero_count = 0
-        # one_count = 0
-        # two_count = 0
-        #
-        # # count number of mutations for each gene
-        # for mut_count in row[2::].values:
-        #     if mut_count == 0:
-        #         zero_count += 1
-        #     elif mut_count == 1:
-        #         one_count += 1
-        #     elif mut_count == 2:
-        #         two_count += 1
+        zero_count = 0
+        one_count = 0
+        two_count = 0
+
+        # count number of mutations for each gene
+        for mut_count in row[2::].values:
+            if mut_count == 0:
+                zero_count += 1
+            elif mut_count == 1:
+                one_count += 1
+            elif mut_count == 2:
+                two_count += 1
 
         # calculate the percents of each mutation
         total = zero_count + one_count + two_count
@@ -259,9 +260,9 @@ def __calc_snp_percents(user_mutations):
         one_pct.append(0 if one_count == 0 else float(one_count) / total * 100)
         two_pct.append(0 if two_count == 0 else float(two_count) / total * 100)
 
-    user_mutations.apply(count_snps, axis=1)
-    user_mutations['pct_fm'] = two_pct
-    user_mutations['pct_nm'] = zero_pct
-    user_mutations['pct_pm'] = one_pct
+    pheno_df.apply(count_snps, axis=1)
+    pheno_df['pct_fm'] = two_pct
+    pheno_df['pct_nm'] = zero_pct
+    pheno_df['pct_pm'] = one_pct
 
-    return user_mutations
+    return pheno_df
