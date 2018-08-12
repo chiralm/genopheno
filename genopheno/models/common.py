@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger("root")
 
 
-def build_model(data_set, data_split, no_interactions, negative, model, cross_validation, max_snps, output_dir,
+def build_model(data_set, data_split, no_interactions, negative, model, cross_validation, output_dir,
                 param_grid={}, model_eval={}):
     """
     Builds a model for the data set

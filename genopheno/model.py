@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+import sys
 
 import pandas as pd
 import logging
@@ -81,9 +82,9 @@ def run(preprocessed_dir, invalid_thresh, invalid_user_thresh, relative_diff_thr
     model_data_builder = model_data.ModelDataBuilder(phenotypes, data_split)
 
     data_set = timed_invoke('creating model data set', lambda: mutation_difference.create_dataset(
-                               model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh)
+                               model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh, max_snps)
                             )
-    timed_invoke('building model', lambda: build_model(data_set, data_split, no_interactions, negative, max_snps,
+    timed_invoke('building model', lambda: build_model(data_set, data_split, no_interactions, negative,
                                                        cross_validation, output_dir))
     logger.info('Output written to "{}"'.format(output_dir))
 
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--max-snps",
         "-ms",
-        default=None,
+        default=sys.maxsize,
         type=int,
         help="The maximum number of SNPs to include in the model"
              "\n\nDefault: None"

@@ -1,4 +1,5 @@
 import random
+import pandas as pd
 
 
 class ModelDataBuilder:
@@ -90,11 +91,11 @@ class ModelDataBuilder:
         training = self.reduce_training(self.__merge_phenos)
         testing = self.reduce_testing(self.__merge_phenos)
 
-        # todo build testing and training y (phenotypes) array
-        pass
+        return ModelData(training, testing)
 
     def __finalize_df(self, pheno, pheno_df):
         # todo remove non-user columns
+        columns = pheno_df.columns.values
 
         # transpose and add the phenotype label
         transposed_data = pheno_df.transpose()
@@ -104,13 +105,10 @@ class ModelDataBuilder:
 
 
     def __merge_phenos(self, phenotypes):
-        pass
+        return pd.concat(phenotypes.values())
 
 
 class ModelData:
-    def __init__(self, y_label_map, y_test, y_train, x_test, x_train):
-        self.y_label_map = y_label_map
-        self.y_test = y_test
-        self.y_train = y_train
-        self.x_test = x_test
-        self.x_train = x_train
+    def __init__(self, training, testing):
+        self.training = training
+        self.testing = testing
