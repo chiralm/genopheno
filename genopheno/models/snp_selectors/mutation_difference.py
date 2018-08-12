@@ -182,20 +182,11 @@ def __apply_selected_snps(pheno_df, selected_snps):
 
     return snp_data
 
-    # # Drop the mutation percentages and gene info columns because they are no longer needed
-    # snp_data.drop(labels=['Gene_info', 'pct_fm', 'pct_nm', 'pct_pm'], axis=1, inplace=True)
-    #
-    # # Transpose the data and add columns for user Id and phenotype
-    # transposed_data = snp_data.transpose()
-    # transposed_data['phenotype'] = pheno_label
-    #
-    # return transposed_data
-
 
 def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, relative_diff_thresh, max_snps):
     """
     Function to return those SNPs that satisfy a criterion to check for differences between blue and brown SNPs
-    :param phenotypes: A map of phenotypes where the key is the phenotype ID and the value is the phenotype data frame.
+    :param model_data_builder: The builder to mutate the preprocessed phenotype dataframes
     :param invalid_thresh: The percentage of missing user observations a SNP can have before it is removed
     :param invalid_user_thresh: The acceptable percentage of missing data before a user is discarded
     :param relative_diff_thresh: The relative difference in mutation percent, calculated as a percent of the
@@ -203,14 +194,6 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     :return: A DataFrame where each row is a user and each column is a SNP.
     The value is the number of mutations (0,1,2).
     """
-    # todo
-    # split data set
-    # for training set filter out SNPs with too many missing observations
-    # for training set calculate percentages
-    # for training set select feature SNPs
-    # for training and testing drop unselected SNPs
-    # for training and testing data set remove users that do not have enough SNPs
-
     # Filter out SNPs that do not have enough user observations in training data
     model_data_builder.apply_to_training(lambda pheno, pheno_df: __remove_missing_data(pheno, pheno_df, invalid_thresh))
 
@@ -223,8 +206,9 @@ def create_dataset(model_data_builder, invalid_thresh, invalid_user_thresh, rela
     logger.info('{} SNPs with mutation differences identified'.format(len(selected_snps)))
 
     if len(selected_snps) > max_snps:
+        logger.warning('Selected SNP count ({}) greater than configured max SNPs count ({}). Dropping extra SNPs.'
+                       .format(len(selected_snps), max_snps))
         selected_snps = selected_snps[:max_snps - 1]
-        # todo log
 
     # Generate data frame for each phenotype using the selected SNPs
     model_data_builder.apply(lambda pheno, pheno_df: __apply_selected_snps(pheno_df, selected_snps))
