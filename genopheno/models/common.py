@@ -52,11 +52,11 @@ def build_model(data_set, data_split, no_interactions, negative, model, cross_va
     # Do this after the test train split because while the ratio of each phenotype is the same in the split, different
     # rows are chosen based on which phenotype is assigned a 0 and 1. Do this after the split means consistent rows
     # will be selected regardless of which phenotype is assigned as the negative.
-    pheno_map = __pheno_to_binary(y_train, y_test, negative)
+    pheno_map = _pheno_to_binary(y_train, y_test, negative)
     model_config['pheno_map'] = pheno_map
 
     # Replace nan values
-    imputer, x_train, x_test = __impute_data(x_train, x_test)
+    imputer, x_train, x_test = _impute_data(x_train, x_test)
     model_config['imputer'] = imputer
 
     # print data counts
@@ -126,7 +126,7 @@ def __save_confusion_matrix(y_true, y_pred, output_dir, file_suffix):
         metrics_file.write(metrics)
 
 
-def __pheno_to_binary(y_train, y_test, negative):
+def _pheno_to_binary(y_train, y_test, negative):
     """
     Converts the phenotype labels to 0 and 1
     :param data_set: The feature matrix
@@ -154,7 +154,7 @@ def __pheno_to_binary(y_train, y_test, negative):
     return {0: negative, 1: positive}
 
 
-def __impute_data(x_train, x_test):
+def _impute_data(x_train, x_test):
     """
     Fills in the missing data. nan values will be replaced with the most frequent value for the feature
     :param x_train: The training data
