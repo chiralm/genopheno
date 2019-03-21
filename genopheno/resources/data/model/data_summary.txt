@@ -1,0 +1,7 @@
+-- Data Summary --
+	Negative (Blue_Green):	8 (34.8%)
+	Positive (Brown):	15 (65.2%)
+	TOTAL:	23
+Training Count:	15
+Test Count:	8
+Number of SNP Features:	237250

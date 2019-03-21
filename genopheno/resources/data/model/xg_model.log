@@ -1,0 +1,21 @@
+[INFO] 2019-03-21 15:11:40,838:  Started reading the preprocessed files...
+[INFO] 2019-03-21 15:11:43,381:  8 users and 1304138 SNPs for phenotype 'Blue_Green'
+[INFO] 2019-03-21 15:11:47,339:  15 users and 1304138 SNPs for phenotype 'Brown'
+[INFO] 2019-03-21 15:11:47,547:  Finished reading the preprocessed files in 6 seconds
+[INFO] 2019-03-21 15:11:47,548:  Started creating model data set...
+[INFO] 2019-03-21 15:11:49,143:  800915 (61.41%) SNPs removed due to too many missing user observations for phenotype 'Brown'
+[INFO] 2019-03-21 15:11:49,665:  801012 (61.42%) SNPs removed due to too many missing user observations for phenotype 'Blue_Green'
+[INFO] 2019-03-21 15:11:52,229:  237250 SNPs with mutation differences identified
+[INFO] 2019-03-21 15:11:54,910:  0 users dropped due to too many missing observations
+[INFO] 2019-03-21 15:11:54,910:  Model Data contains 23 users and 237250 SNPs
+[INFO] 2019-03-21 15:11:54,920:  Finished creating model data set in 7 seconds
+[INFO] 2019-03-21 15:12:01,157:  Started building model...
+[INFO] 2019-03-21 15:12:36,097:  -- Data Summary --
+	Negative (Blue_Green):	8 (34.8%)
+	Positive (Brown):	15 (65.2%)
+	TOTAL:	23
+
+[INFO] 2019-03-21 15:12:36,097:  Training Count:	15
+Test Count:	8
+Number of SNP Features:	237250
+
